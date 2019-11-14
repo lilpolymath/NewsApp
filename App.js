@@ -4,20 +4,30 @@
  */
 
 import React, {Component} from 'react';
-import {FlatList} from 'react-native';
+import {FlatList, StyleSheet, TouchableOpacity, View} from 'react-native';
+import {Card, Divider, Text} from 'react-native-elements';
+import moment from 'moment';
 import {getNews} from './src/news';
-import Article from './src/components/Articles';
+import WebViewExample from './src/Webview';
 
 export default class App extends Component {
   constructor(props) {
     super(props);
-    this.state = {articles: [], refreshing: true};
+    this.state = {openWebView: false, link: '', articles: [], refreshing: true};
     this.fetchNews = this.fetchNews.bind(this);
+    this.handleView = this.handleView.bind(this);
   }
 
   componentDidMount() {
     this.fetchNews();
   }
+
+  handleView = url => {
+    this.setState({
+      openWebView: true,
+      link: url,
+    });
+  };
 
   fetchNews = () => {
     getNews()
@@ -35,10 +45,23 @@ export default class App extends Component {
   };
 
   render() {
-    return (
+    const {link} = this.state;
+    return this.state.openWebView ? (
+      <WebViewExample url={link} />
+    ) : (
       <FlatList
         data={this.state.articles}
-        renderItem={({item}) => <Article article={item} />}
+        renderItem={({item}) => (
+          <RenderRow
+            title={item.title}
+            description={item.description}
+            url={item.url}
+            publishedAt={item.publishedAt}
+            urlToImage={item.urlToImage}
+            source={item.source}
+            handleView={this.handleView}
+          />
+        )}
         keyExtractor={item => item.url}
         refreshing={this.state.refreshing}
         onRefresh={this.handleRefresh.bind(this)}
@@ -47,37 +70,51 @@ export default class App extends Component {
   }
 }
 
-// import React, {Component} from 'react';
-// import {Platform, StyleSheet, Text, View, Dimensions} from 'react-native';
+function RenderRow({
+  title,
+  description,
+  url,
+  publishedAt,
+  urlToImage,
+  source,
+  handleView,
+}) {
+  const time = moment(publishedAt || moment.now()).fromNow();
+  const defaultImg =
+    'https://wallpaper.wiki/wp-content/uploads/2017/04/wallpaper.wiki-Images-HD-Diamond-Pattern-PIC-WPB009691.jpg';
+  return (
+    <View>
+      <TouchableOpacity onPress={() => handleView(url)}>
+        <Card
+          featuredTitle={title}
+          featuredTitleStyle={styles.featuredTitleStyle}
+          image={{uri: urlToImage || defaultImg}}>
+          <Text style={{marginBottom: 5}}>{description || 'Read more...'}</Text>
+          <Divider style={{backgroundColor: '#dfe6e9'}} />
+          <View style={styles.infoSection}>
+            <Text style={styles.noteStyle}>{source.name.toUpperCase()}</Text>
+            <Text style={styles.noteStyle}>{time}</Text>
+          </View>
+        </Card>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
-// import {WebView} from 'react-native-webview';
-
-// const deviceHeight = Dimensions.get('window').height;
-// const deviceWidth = Dimensions.get('window').width;
-
-// type Props = {};
-// export default class App extends Component<Props> {
-//   render() {
-//     return (
-//       <View style={{flex: 1}}>
-//         <WebView
-//           style={styles.webview}
-//           source={{uri: 'https://www.slack.com'}}
-//           javaScriptEnabled={true}
-//           domStorageEnabled={true}
-//           startInLoadingState={false}
-//           scalesPageToFit={true}
-//         />
-//       </View>
-//     );
-//   }
-// }
-
-// const styles = StyleSheet.create({
-//   webview: {
-//     flex: 1,
-//     backgroundColor: 'yellow',
-//     width: deviceWidth,
-//     height: deviceHeight,
-//   },
-// });
+const styles = StyleSheet.create({
+  featuredTitleStyle: {
+    marginHorizontal: 15,
+    textShadowColor: '#d3d3d3',
+    textShadowRadius: 3,
+  },
+  noteStyle: {
+    margin: 5,
+    fontStyle: 'italic',
+    color: '#000000',
+    fontSize: 12,
+  },
+  infoSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+});
